@@ -2,11 +2,15 @@ import * as cdk from '@aws-cdk/core';
 import * as apigw from '@aws-cdk/aws-apigateway';
 import * as ddb from '@aws-cdk/aws-dynamodb';
 import * as lambda from '@aws-cdk/aws-lambda';
+import * as iam from '@aws-cdk/aws-iam';
 import * as path from 'path';
 
 export class AwsMobilePushServerCdkStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const api = new apigw.RestApi(this, 'PushTokenManagementApi');
+    const v1 = api.root.addResource('v1');
 
     const table = new ddb.Table(this, 'PushTokenManagementTable', {
       partitionKey: {
@@ -14,6 +18,19 @@ export class AwsMobilePushServerCdkStack extends cdk.Stack {
         type: ddb.AttributeType.STRING
       }
     })
+
+    const createFcmAppFunction = new lambda.Function(this, 'CreateFcmAppFunction', {
+      runtime: lambda.Runtime.PYTHON_3_8,
+      handler: 'index.create_fcm_application',
+      code: lambda.Code.fromAsset(path.join(__dirname, 'function')),
+    });
+    createFcmAppFunction.role?.addManagedPolicy(
+      iam.ManagedPolicy.fromManagedPolicyArn(this, 'AmazonSNSFullAccess',
+        'arn:aws:iam::aws:policy/AmazonSNSFullAccess')
+    );
+    const createFcmAppInteg = new apigw.LambdaIntegration(createFcmAppFunction);
+    const createFcmApp = v1.addResource('app');
+    const createFcmAppPost = createFcmApp.addMethod('POST', createFcmAppInteg);
 
     const registerFunction = new lambda.Function(this, 'RegisterFunction', {
       runtime: lambda.Runtime.PYTHON_3_8,
@@ -23,17 +40,10 @@ export class AwsMobilePushServerCdkStack extends cdk.Stack {
         TABLE_NAME: table.tableName
       }
     });
-
     table.grantFullAccess(registerFunction);
-    
-
-    const api = new apigw.RestApi(this, 'PushTokenManagementApi');
     const registerInteg = new apigw.LambdaIntegration(registerFunction);
-
-    const v1 = api.root.addResource('v1');
     const register = v1.addResource('register');
-    const registerPost = register.addMethod('GET', registerInteg);
+    const registerPost = register.addMethod('POST', registerInteg);
 
-    
   }
 }

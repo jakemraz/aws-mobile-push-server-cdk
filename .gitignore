@@ -6,3 +6,10 @@ node_modules
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# Mac
+.DS_Store
+
+# python
+.pyenv
+
