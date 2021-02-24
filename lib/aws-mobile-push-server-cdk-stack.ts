@@ -14,7 +14,11 @@ export class AwsMobilePushServerCdkStack extends cdk.Stack {
 
     const table = new ddb.Table(this, 'PushTokenManagementTable', {
       partitionKey: {
-        name: 'Id',
+        name: 'UserId',
+        type: ddb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'Token',
         type: ddb.AttributeType.STRING
       }
     })
