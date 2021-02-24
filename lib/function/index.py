@@ -1,7 +1,12 @@
 import json
 import boto3
+import os
 
-client = boto3.client('sns')
+sns = boto3.client('sns')
+ddb = boto3.resource('dynamodb')
+table = ddb.Table(os.environ['TOKEN_TABLE'])
+account_no = os.environ['ACCOUNT_NO']
+region = boto3.Session().region_name
 
 def create_fcm_application(event, context):
   body = json.loads(event['body'])
@@ -11,7 +16,7 @@ def create_fcm_application(event, context):
     'PlatformCredential': body['ApiKey']
   }
 
-  response = client.create_platform_application(
+  response = sns.create_platform_application(
     Name=app_name,
     Platform=platform,
     Attributes=attributes
@@ -22,8 +27,28 @@ def create_fcm_application(event, context):
 
 def register(event, context):
   print(event)
+  body = json.loads(event['body'])
   
-  return success(event)
+  app_name = body['ApplicationName']
+  user_id = body['UserId']
+  token = body['Token']
+  response = table.put_item(
+    Item={
+      'UserId':user_id,
+      'Token':token
+    }
+  )
+  print(response)
+
+  app_arn = f'arn:aws:sns:{region}:{account_no}:app/GCM/{app_name}'
+  print(app_arn)
+  response = sns.create_platform_endpoint(
+    PlatformApplicationArn=app_arn,
+    Token=token
+  )
+  print(response)
+  
+  return success(response)
 
 def success(message):
   return {
