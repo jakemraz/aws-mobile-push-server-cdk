@@ -18,7 +18,7 @@ export class AwsMobilePushServerCdkStack extends cdk.Stack {
         type: ddb.AttributeType.STRING
       },
       sortKey: {
-        name: 'Token',
+        name: 'EndpointArn',
         type: ddb.AttributeType.STRING
       }
     })
@@ -46,7 +46,7 @@ export class AwsMobilePushServerCdkStack extends cdk.Stack {
     });
     registerFunction.role?.addManagedPolicy(snsFullAccessPolicy);
     table.grantFullAccess(registerFunction);
-    
+
     const registerInteg = new apigw.LambdaIntegration(registerFunction);
     const register = v1.addResource('register');
     const registerPost = register.addMethod('POST', registerInteg);

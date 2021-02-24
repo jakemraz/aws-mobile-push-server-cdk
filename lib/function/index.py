@@ -32,13 +32,6 @@ def register(event, context):
   app_name = body['ApplicationName']
   user_id = body['UserId']
   token = body['Token']
-  response = table.put_item(
-    Item={
-      'UserId':user_id,
-      'Token':token
-    }
-  )
-  print(response)
 
   app_arn = f'arn:aws:sns:{region}:{account_no}:app/GCM/{app_name}'
   print(app_arn)
@@ -46,7 +39,18 @@ def register(event, context):
     PlatformApplicationArn=app_arn,
     Token=token
   )
+  endpoint_arn = response['EndpointArn']
   print(response)
+  
+  response = table.put_item(
+    Item={
+      'UserId':user_id,
+      'EndpointArn':endpoint_arn,
+      'Token':token
+    }
+  )
+  print(response)
+
   
   return success(response)
 
